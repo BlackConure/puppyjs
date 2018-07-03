@@ -1,16 +1,13 @@
 'use strict'
 const path = require('path')
-const chalk = require('chalk')
 const chokidar = require('chokidar')
 const expressuws = require('express-ws')
+
+const charcoal = require('./charcoal')
 
 let timeouts = []
 let intervals = []
 let wsDefaultResponses = {}
-
-const log = chalk.bold.magenta
-const error = chalk.bold.red
-const socket = chalk.bold.greenBright
 
 function initialize (wsApp, internalApp) {
   const expressUms = expressuws(wsApp) // eslint-disable-line
@@ -26,9 +23,7 @@ function initialize (wsApp, internalApp) {
         return
       }
 
-      if (process.env.VERBOSE === 'true' && event === 'change') {
-        console.log(chalk.bold.cyan(`Puppy WS: Changes detected, reloading ${process.env.WS} file`))
-      }
+      charcoal.log(`Puppy WS: Changes detected, reloading ${process.env.WS} file`)
 
       delete require.cache[require.resolve(path)]
 
@@ -46,21 +41,15 @@ function initialize (wsApp, internalApp) {
         timeouts = []
         intervals = []
 
-        if (process.env.VERBOSE === 'true') {
-          console.log(log(`Puppy WS: ${process.env.WS} loaded. Refresh browser to view changes`))
-        }
+        charcoal.debug(`Puppy WS: ${process.env.WS} loaded. Refresh browser to view changes`)
       } catch (e) {
-        if (process.env.VERBOSE === 'true') {
-          console.log(error(`Puppy WS: failed to load default responses from ${process.env.WS}`))
-          console.error(e)
-        }
+        charcoal.error(`Puppy WS: failed to load default responses from ${process.env.WS}`)
+        charcoal.error(e)
       }
     })
 
   wsApp.ws(process.env.WS_URL, ws => {
-    if (process.env.VERBOSE === 'true') {
-      console.debug(socket('Puppy WS: Client connected'))
-    }
+    charcoal.debug('Puppy WS: Client connected')
 
     wsDefaultResponses
       .forEach(event => {
@@ -68,9 +57,7 @@ function initialize (wsApp, internalApp) {
           const _emitMessage = async message => {
 
             if (ws.readyState !== 1) {
-              if (process.env.VERBOSE === 'true') {
-                console.log(chalk.keyword('orange')('Puppy WS: Clearing previous timeout and interval for event due to socket disconnection'))
-              }
+              charcoal.debug('Puppy WS: Clearing previous timeout and interval for event due to socket disconnection')
 
               clearTimeout(timeout)
               clearInterval(interval)
@@ -81,18 +68,17 @@ function initialize (wsApp, internalApp) {
               try {
                 message = await message()
               } catch (err) {
-                console.log(chalk.bold.red('Puppy WS: Something went wrong while executing the function'))
-                console.error(err)
+                charcoal.error('Puppy WS: Something went wrong while executing the function')
+                charcoal.error(err)
+
                 clearTimeout(timeout)
                 clearInterval(interval)
                 return
               }
             }
 
-            if (process.env.VERBOSE === 'true') {
-              console.log(chalk.cyan(`Puppy WS: `) + chalk.bold.cyan(`Emitting [${event.label}]`))
-              console.log(chalk.bold.magenta(JSON.stringify(message)))
-            }
+            charcoal.debug(`Puppy WS: Emitting [${event.label}]`)
+            charcoal.debug(JSON.stringify(message))
 
             ws.send(JSON.stringify(message))
           }
@@ -110,9 +96,7 @@ function initialize (wsApp, internalApp) {
       })
 
     ws.on('message', message => {
-      if (process.env.VERBOSE === 'true') {
-        console.log(socket('Puppy WS: Received message: %s'), message)
-      }
+      charcoal.debug(`Puppy WS: Received message: ${message}`)
     })
   })
 
